@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pwgen — Password Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --border: #1e2330;
+    --accent: #00e5a0;
+    --accent2: #0084ff;
+    --danger: #ff4466;
+    --text: #e8eaf0;
+    --muted: #5a6080;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 80px;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 200px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 680px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo::before {
+    content: '>';
+    font-family: var(--mono);
+    color: var(--accent);
+    animation: blink 1.2s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(36px, 8vw, 64px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .tagline {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* Controls panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Length control */
+  .length-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .length-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    white-space: nowrap;
+    width: 80px;
+  }
+
+  .length-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+
+  .length-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    cursor: pointer;
+    border-radius: 0;
+    transition: transform 0.1s;
+  }
+
+  .length-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+  }
+
+  .length-value {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* Count control */
+  .count-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* Checkboxes */
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+
+  .option:hover {
+    border-color: var(--muted);
+  }
+
+  .option.checked {
+    border-color: var(--accent);
+    background: rgba(0, 229, 160, 0.05);
+  }
+
+  .option-box {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--muted);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .option.checked .option-box {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  .option-box::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--bg);
+    display: none;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  .option.checked .option-box::after {
+    display: block;
+  }
+
+  .option-label {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .option-sample {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* Generate button */
+  .generate-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 24px;
+    transition: transform 0.1s, opacity 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .generate-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .generate-btn:hover::after { opacity: 0.1; }
+  .generate-btn:active { transform: scale(0.99); }
+
+  /* Results */
+  .results-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .results-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .results-title {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .copy-all-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--accent2);
+    background: none;
+    border: 1px solid var(--accent2);
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .copy-all-btn:hover {
+    background: rgba(0, 132, 255, 0.1);
+  }
+
+  .results-list {
+    padding: 8px 0;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .results-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .results-list::-webkit-scrollbar-track { background: var(--bg); }
+  .results-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .pw-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 20px;
+    gap: 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid transparent;
+  }
+
+  .pw-row:hover {
+    background: rgba(255,255,255,0.03);
+  }
+
+  .pw-row:hover .pw-copy-hint {
+    opacity: 1;
+  }
+
+  .pw-index {
+    font-size: 10px;
+    color: var(--muted);
+    width: 20px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+
+  .pw-text {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  /* Colorize character types */
+  .c-upper { color: #7eb8ff; }
+  .c-lower { color: var(--text); }
+  .c-digit { color: #ffd166; }
+  .c-symbol { color: #ff9a8b; }
+
+  .pw-copy-hint {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+
+  .pw-row.copied .pw-copy-hint {
+    opacity: 1;
+    color: var(--accent);
+  }
+
+  /* Strength bar */
+  .strength-row {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .strength-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .strength-bar {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .strength-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.4s ease, background 0.4s ease;
+  }
+
+  .strength-text {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    min-width: 60px;
+    text-align: right;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 48px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--accent);
+    color: var(--bg);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 10px 20px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .options-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo">pwgen</div>
+    <h1>Password<br><span>Generator</span></h1>
+    <div class="tagline">// cryptographically random · browser-local · zero network</div>
+  </header>
+
+  <div class="panel">
+    <div class="panel-title">// configuration</div>
+
+    <div class="length-row">
+      <span class="length-label">LENGTH</span>
+      <input type="range" class="length-slider" id="lengthSlider" min="4" max="64" value="16">
+      <span class="length-value" id="lengthValue">16</span>
+    </div>
+
+    <div class="count-row">
+      <span class="length-label">COUNT</span>
+      <input type="range" class="length-slider" id="countSlider" min="1" max="20" value="8">
+      <span class="length-value" id="countValue">8</span>
+    </div>
+
+    <div class="options-grid">
+      <label class="option checked" id="opt-upper">
+        <div class="option-box"></div>
+        <span class="option-label">大文字</span>
+        <span class="option-sample">A–Z</span>
+        <input type="checkbox" checked style="display:none" data-key="upper">
+      </label>
+      <label class="option checked" id="opt-lower">
+        <div class="option-box"></div>
+        <span class="option-label">小文字</span>
+        <span class="option-sample">a–z</span>
+        <input type="checkbox" checked style="display:none" data-key="lower">
+      </label>
+      <label class="option checked" id="opt-digit">
+        <div class="option-box"></div>
+        <span class="option-label">数字</span>
+        <span class="option-sample">0–9</span>
+        <input type="checkbox" checked style="display:none" data-key="digit">
+      </label>
+      <label class="option" id="opt-symbol">
+        <div class="option-box"></div>
+        <span class="option-label">記号</span>
+        <span class="option-sample">!@#…</span>
+        <input type="checkbox" style="display:none" data-key="symbol">
+      </label>
+    </div>
+
+    <button class="generate-btn" id="generateBtn">Generate Passwords</button>
+  </div>
+
+  <div class="results-panel" id="resultsPanel">
+    <div class="results-header">
+      <span class="results-title">// output</span>
+      <button class="copy-all-btn" id="copyAllBtn">Copy All</button>
+    </div>
+    <div class="results-list" id="resultsList">
+      <div class="empty-state">— press generate —</div>
+    </div>
+    <div class="strength-row" id="strengthRow" style="display:none">
+      <span class="strength-label">ENTROPY</span>
+      <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+      <span class="strength-text" id="strengthText"></span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const CHARS = {
+    upper:  'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lower:  'abcdefghijklmnopqrstuvwxyz',
+    digit:  '0123456789',
+    symbol: '!@#$%^&*()-_=+[]{}|;:,.<>?'
+  };
+
+  // --- UI bindings ---
+  const lengthSlider = document.getElementById('lengthSlider');
+  const lengthValue  = document.getElementById('lengthValue');
+  const countSlider  = document.getElementById('countSlider');
+  const countValue   = document.getElementById('countValue');
+  const generateBtn  = document.getElementById('generateBtn');
+  const resultsList  = document.getElementById('resultsList');
+  const copyAllBtn   = document.getElementById('copyAllBtn');
+  const strengthRow  = document.getElementById('strengthRow');
+  const strengthFill = document.getElementById('strengthFill');
+  const strengthText = document.getElementById('strengthText');
+  const toast        = document.getElementById('toast');
+
+  lengthSlider.addEventListener('input', () => lengthValue.textContent = lengthSlider.value);
+  countSlider.addEventListener('input',  () => countValue.textContent  = countSlider.value);
+
+  // Toggle option checkboxes
+  document.querySelectorAll('.option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const cb = opt.querySelector('input[type=checkbox]');
+      // Prevent unchecking the last active option
+      const active = document.querySelectorAll('.option.checked').length;
+      if (opt.classList.contains('checked') && active <= 1) return;
+      opt.classList.toggle('checked');
+      cb.checked = opt.classList.contains('checked');
+    });
+  });
+
+  // --- Core generation ---
+  function generatePassword(length, opts) {
+    let pool = '';
+    if (opts.upper)  pool += CHARS.upper;
+    if (opts.lower)  pool += CHARS.lower;
+    if (opts.digit)  pool += CHARS.digit;
+    if (opts.symbol) pool += CHARS.symbol;
+    if (!pool) pool = CHARS.lower;
+
+    const arr = new Uint32Array(length);
+    crypto.getRandomValues(arr);
+    let pw = '';
+    for (let i = 0; i < length; i++) {
+      pw += pool[arr[i] % pool.length];
+    }
+
+    // Guarantee at least one char from each selected type
+    const required = [];
+    if (opts.upper)  required.push(CHARS.upper);
+    if (opts.lower)  required.push(CHARS.lower);
+    if (opts.digit)  required.push(CHARS.digit);
+    if (opts.symbol) required.push(CHARS.symbol);
+
+    if (required.length > 1 && length >= required.length) {
+      const positions = [...Array(length).keys()];
+      // shuffle positions
+      for (let i = positions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [positions[i], positions[j]] = [positions[j], positions[i]];
+      }
+      const pwArr = pw.split('');
+      required.forEach((charset, idx) => {
+        const rnd = new Uint32Array(1);
+        crypto.getRandomValues(rnd);
+        pwArr[positions[idx]] = charset[rnd[0] % charset.length];
+      });
+      pw = pwArr.join('');
+    }
+    return pw;
+  }
+
+  function charClass(ch) {
+    if (/[A-Z]/.test(ch)) return 'c-upper';
+    if (/[a-z]/.test(ch)) return 'c-lower';
+    if (/[0-9]/.test(ch)) return 'c-digit';
+    return 'c-symbol';
+  }
+
+  function colorize(pw) {
+    return pw.split('').map(ch =>
+      `<span class="${charClass(ch)}">${ch}</span>`
+    ).join('');
+  }
+
+  function calcEntropy(length, opts) {
+    let poolSize = 0;
+    if (opts.upper)  poolSize += 26;
+    if (opts.lower)  poolSize += 26;
+    if (opts.digit)  poolSize += 10;
+    if (opts.symbol) poolSize += CHARS.symbol.length;
+    return Math.floor(length * Math.log2(poolSize));
+  }
+
+  function updateStrength(bits) {
+    strengthRow.style.display = 'flex';
+    const pct = Math.min(100, Math.round(bits / 128 * 100));
+    let label, color;
+    if (bits < 40)       { label = 'WEAK';   color = '#ff4466'; }
+    else if (bits < 64)  { label = 'FAIR';   color = '#ffd166'; }
+    else if (bits < 96)  { label = 'GOOD';   color = '#00e5a0'; }
+    else                 { label = 'STRONG'; color = '#0084ff'; }
+    strengthFill.style.width = pct + '%';
+    strengthFill.style.background = color;
+    strengthText.style.color = color;
+    strengthText.textContent = `${bits} bits · ${label}`;
+  }
+
+  let passwords = [];
+
+  function generate() {
+    const length = parseInt(lengthSlider.value);
+    const count  = parseInt(countSlider.value);
+    const opts = {
+      upper:  document.querySelector('[data-key="upper"]').checked,
+      lower:  document.querySelector('[data-key="lower"]').checked,
+      digit:  document.querySelector('[data-key="digit"]').checked,
+      symbol: document.querySelector('[data-key="symbol"]').checked,
+    };
+
+    passwords = Array.from({ length: count }, () => generatePassword(length, opts));
+
+    resultsList.innerHTML = passwords.map((pw, i) => `
+      <div class="pw-row" data-pw="${pw.replace(/"/g, '&quot;')}" onclick="copyRow(this)">
+        <span class="pw-index">${String(i + 1).padStart(2, '0')}</span>
+        <span class="pw-text">${colorize(pw)}</span>
+        <span class="pw-copy-hint">COPY</span>
+      </div>
+    `).join('');
+
+    updateStrength(calcEntropy(length, opts));
+    generateBtn.textContent = 'Regenerate';
+  }
+
+  function copyRow(el) {
+    const pw = el.dataset.pw;
+    navigator.clipboard.writeText(pw).then(() => {
+      document.querySelectorAll('.pw-row').forEach(r => r.classList.remove('copied'));
+      el.classList.add('copied');
+      el.querySelector('.pw-copy-hint').textContent = 'COPIED';
+      setTimeout(() => {
+        el.classList.remove('copied');
+        el.querySelector('.pw-copy-hint').textContent = 'COPY';
+      }, 2000);
+    });
+  }
+
+  copyAllBtn.addEventListener('click', () => {
+    if (!passwords.length) return;
+    navigator.clipboard.writeText(passwords.join('\n')).then(() => {
+      showToast('ALL PASSWORDS COPIED');
+    });
+  });
+
+  generateBtn.addEventListener('click', generate);
+
+  // Also allow Enter key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.target.matches('input[type=range]')) generate();
+  });
+
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // Generate on load
+  generate();
+</script>
+</body>
+</html>
