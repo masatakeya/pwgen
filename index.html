@@ -573,7 +573,8 @@
   countSlider.addEventListener('input',  () => countValue.textContent  = countSlider.value);
 
   document.querySelectorAll('.option').forEach(opt => {
-    opt.addEventListener('click', () => {
+    opt.addEventListener('click', (e) => {
+      e.preventDefault();
       const active = document.querySelectorAll('.option.checked').length;
       if (opt.classList.contains('checked') && active <= 1) return;
       opt.classList.toggle('checked');
