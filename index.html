@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <title>pwgen — Password Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -23,6 +25,55 @@
     --radius: 14px;
     --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
     --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+    --hover-border: #93c5fd;
+    --accent-hover-bg: #dbeafe;
+    --row-hover: #fafbff;
+    --toast-bg: #111827;
+    --toast-text: #ffffff;
+    --c-upper: #2563eb;
+    --c-lower: #111827;
+    --c-digit: #d97706;
+    --c-symbol: #dc2626;
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115;
+      --surface: #181b22;
+      --border: #2c313c;
+      --accent: #60a5fa;
+      --accent-light: #1e293b;
+      --accent-hover: #3b82f6;
+      --success: #34d399;
+      --success-light: #064e3b;
+      --text: #f3f4f6;
+      --text-2: #c2c7d0;
+      --text-3: #8b93a1;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      --hover-border: #3b82f6;
+      --accent-hover-bg: #253247;
+      --row-hover: #1d212a;
+      --toast-bg: #f3f4f6;
+      --toast-text: #111827;
+      --c-upper: #60a5fa;
+      --c-lower: #f3f4f6;
+      --c-digit: #fbbf24;
+      --c-symbol: #f87171;
+    }
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -181,6 +232,7 @@
   }
 
   .option {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -192,8 +244,13 @@
     transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   }
 
+  .option:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .option:hover {
-    border-color: #93c5fd;
+    border-color: var(--hover-border);
     box-shadow: 0 0 0 3px rgba(37,99,235,0.07);
   }
 
@@ -253,6 +310,11 @@
     box-shadow: 0 4px 14px rgba(37,99,235,0.30);
   }
 
+  .generate-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   .generate-btn:hover {
     background: var(--accent-hover);
     box-shadow: 0 6px 20px rgba(37,99,235,0.38);
@@ -294,7 +356,12 @@
     transition: background 0.15s;
   }
 
-  .copy-all-btn:hover { background: #dbeafe; }
+  .copy-all-btn:hover:not(:disabled) { background: var(--accent-hover-bg); }
+
+  .copy-all-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 
   .results-list {
     max-height: 380px;
@@ -315,7 +382,7 @@
   }
 
   .pw-row:last-child { border-bottom: none; }
-  .pw-row:hover { background: #fafbff; }
+  .pw-row:hover { background: var(--row-hover); }
 
   .pw-num {
     font-family: var(--mono);
@@ -335,10 +402,10 @@
     word-break: break-all;
   }
 
-  .c-upper { color: #2563eb; }
-  .c-lower { color: #111827; }
-  .c-digit { color: #d97706; }
-  .c-symbol { color: #dc2626; }
+  .c-upper { color: var(--c-upper); }
+  .c-lower { color: var(--c-lower); }
+  .c-digit { color: var(--c-digit); }
+  .c-symbol { color: var(--c-symbol); }
 
   .pw-copy-btn {
     flex-shrink: 0;
@@ -355,7 +422,13 @@
     transition: opacity 0.15s, color 0.15s, border-color 0.15s, background 0.15s;
   }
 
-  .pw-row:hover .pw-copy-btn { opacity: 1; }
+  .pw-row:hover .pw-copy-btn,
+  .pw-copy-btn:focus-visible { opacity: 1; }
+
+  /* タッチ端末ではホバーできないので常に表示 */
+  @media (hover: none) {
+    .pw-copy-btn { opacity: 1; }
+  }
 
   .pw-row.copied .pw-copy-btn {
     opacity: 1;
@@ -368,9 +441,11 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 14px 24px;
-    border-top: 1px solid var(--border);
-    background: #fafbff;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--row-hover);
   }
 
   .entropy-label {
@@ -416,8 +491,8 @@
     bottom: 32px;
     left: 50%;
     transform: translateX(-50%) translateY(12px);
-    background: var(--text);
-    color: #fff;
+    background: var(--toast-bg);
+    color: var(--toast-text);
     font-family: var(--sans);
     font-size: 13px;
     font-weight: 500;
@@ -439,6 +514,8 @@
   @media (max-width: 480px) {
     .card { padding: 20px; }
     .divider { margin: 0 -20px 20px; }
+    .entropy-row { flex-wrap: wrap; justify-content: space-between; row-gap: 10px; }
+    .entropy-bar { order: 1; flex-basis: 100%; }
   }
 </style>
 </head>
@@ -488,7 +565,7 @@
           <div class="option-name">大文字</div>
           <div class="option-sample">A B C … Z</div>
         </div>
-        <input type="checkbox" checked style="display:none" data-key="upper">
+        <input type="checkbox" class="sr-only" checked data-key="upper">
       </label>
       <label class="option checked" id="opt-lower">
         <div class="check-icon">
@@ -500,7 +577,7 @@
           <div class="option-name">小文字</div>
           <div class="option-sample">a b c … z</div>
         </div>
-        <input type="checkbox" checked style="display:none" data-key="lower">
+        <input type="checkbox" class="sr-only" checked data-key="lower">
       </label>
       <label class="option checked" id="opt-digit">
         <div class="check-icon">
@@ -512,7 +589,7 @@
           <div class="option-name">数字</div>
           <div class="option-sample">0 1 2 … 9</div>
         </div>
-        <input type="checkbox" checked style="display:none" data-key="digit">
+        <input type="checkbox" class="sr-only" checked data-key="digit">
       </label>
       <label class="option" id="opt-symbol">
         <div class="check-icon">
@@ -524,25 +601,26 @@
           <div class="option-name">記号</div>
           <div class="option-sample">! @ # $ % …</div>
         </div>
-        <input type="checkbox" style="display:none" data-key="symbol">
+        <input type="checkbox" class="sr-only" data-key="symbol">
       </label>
     </div>
 
-    <button class="generate-btn" id="generateBtn">パスワードを生成する</button>
+    <div class="entropy-row">
+      <span class="entropy-label">この設定の強度</span>
+      <div class="entropy-bar"><div class="entropy-fill" id="entropyFill"></div></div>
+      <span class="entropy-text" id="entropyText"></span>
+    </div>
+
+    <button type="button" class="generate-btn" id="generateBtn">パスワードを生成する</button>
   </div>
 
   <div class="results-card">
     <div class="results-header">
       <span class="results-title">生成結果</span>
-      <button class="copy-all-btn" id="copyAllBtn">すべてコピー</button>
+      <button type="button" class="copy-all-btn" id="copyAllBtn" disabled>すべてコピー</button>
     </div>
-    <div class="results-list" id="resultsList">
-      <div class="empty-state">上のボタンを押すと、<br>ここにパスワードが表示されます。</div>
-    </div>
-    <div class="entropy-row" id="entropyRow" style="display:none">
-      <span class="entropy-label">強度</span>
-      <div class="entropy-bar"><div class="entropy-fill" id="entropyFill"></div></div>
-      <span class="entropy-text" id="entropyText"></span>
+    <div class="results-list" id="resultsList" aria-live="polite">
+      <div class="empty-state">設定を確認してから「パスワードを生成する」を押すと、<br>ここにパスワードが表示されます。</div>
     </div>
   </div>
 </div>
@@ -556,6 +634,7 @@
     digit:  '0123456789',
     symbol: '!@#$%^&*()-_=+[]{}|;:,.<>?'
   };
+  const KEYS = ['upper', 'lower', 'digit', 'symbol'];
 
   const lengthSlider = document.getElementById('lengthSlider');
   const lengthValue  = document.getElementById('lengthValue');
@@ -564,56 +643,88 @@
   const generateBtn  = document.getElementById('generateBtn');
   const resultsList  = document.getElementById('resultsList');
   const copyAllBtn   = document.getElementById('copyAllBtn');
-  const entropyRow   = document.getElementById('entropyRow');
   const entropyFill  = document.getElementById('entropyFill');
   const entropyText  = document.getElementById('entropyText');
   const toast        = document.getElementById('toast');
+  const optionInputs = [...document.querySelectorAll('.option input[type=checkbox]')];
 
-  lengthSlider.addEventListener('input', () => lengthValue.textContent = lengthSlider.value);
-  countSlider.addEventListener('input',  () => countValue.textContent  = countSlider.value);
+  // 0 以上 max 未満の一様な整数。剰余による偏りを避けるため、端数の範囲に入った値は捨てて引き直す
+  function randomInt(max) {
+    const limit = Math.floor(0x100000000 / max) * max;
+    const buf = new Uint32Array(1);
+    do {
+      crypto.getRandomValues(buf);
+    } while (buf[0] >= limit);
+    return buf[0] % max;
+  }
 
-  document.querySelectorAll('.option').forEach(opt => {
-    opt.addEventListener('click', (e) => {
-      e.preventDefault();
-      const active = document.querySelectorAll('.option.checked').length;
-      if (opt.classList.contains('checked') && active <= 1) return;
-      opt.classList.toggle('checked');
-      opt.querySelector('input[type=checkbox]').checked = opt.classList.contains('checked');
+  function getOptions() {
+    return Object.fromEntries(optionInputs.map(i => [i.dataset.key, i.checked]));
+  }
+
+  function selectedSets(opts) {
+    return KEYS.filter(k => opts[k]).map(k => CHARS[k]);
+  }
+
+  // 選んだ文字をすべて同じ確率で使い、選んだ種類が1文字ずつ以上入るまで作り直す。
+  // こうすると「全種類を含むパスワード」全体から一様に選ばれ、特定の位置や文字に偏らない
+  function generatePassword(length, opts) {
+    const sets = selectedSets(opts);
+    const pool = sets.join('');
+    const mustCover = length >= sets.length;
+    for (;;) {
+      let pw = '';
+      for (let i = 0; i < length; i++) pw += pool[randomInt(pool.length)];
+      if (!mustCover || sets.every(set => [...pw].some(ch => set.includes(ch)))) return pw;
+    }
+  }
+
+  // 生成され得るパスワードの数（全種類を含むものだけ）を包除原理で数え、その log2 をビット数とする
+  function calcEntropy(length, opts) {
+    const sizes = selectedSets(opts).map(s => s.length);
+    const total = sizes.reduce((a, b) => a + b, 0);
+    let ratio = 1;
+    if (length >= sizes.length) {
+      ratio = 0;
+      for (let mask = 0; mask < 1 << sizes.length; mask++) {
+        let missing = 0, n = 0;
+        sizes.forEach((s, i) => { if (mask >> i & 1) { missing += s; n++; } });
+        ratio += (n % 2 ? -1 : 1) * Math.pow(1 - missing / total, length);
+      }
+    }
+    return Math.floor(length * Math.log2(total) + Math.log2(ratio));
+  }
+
+  function updateEntropy() {
+    const bits = calcEntropy(parseInt(lengthSlider.value), getOptions());
+    const pct = Math.min(100, Math.round(bits / 128 * 100));
+    let label, color;
+    if (bits < 40)      { label = '弱い';       color = '#ef4444'; }
+    else if (bits < 64) { label = '普通';       color = '#f59e0b'; }
+    else if (bits < 96) { label = '強い';       color = '#10b981'; }
+    else                { label = '非常に強い'; color = '#3b82f6'; }
+    entropyFill.style.width = pct + '%';
+    entropyFill.style.background = color;
+    entropyText.style.color = color;
+    entropyText.textContent = `${bits} bit · ${label}`;
+  }
+
+  lengthSlider.addEventListener('input', () => {
+    lengthValue.textContent = lengthSlider.value;
+    updateEntropy();
+  });
+  countSlider.addEventListener('input', () => countValue.textContent = countSlider.value);
+
+  optionInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      if (!optionInputs.some(i => i.checked)) {
+        input.checked = true;
+        showToast('文字の種類は1つ以上選んでください');
+      }
+      input.closest('.option').classList.toggle('checked', input.checked);
+      updateEntropy();
     });
   });
-
-  function generatePassword(length, opts) {
-    let pool = '';
-    if (opts.upper)  pool += CHARS.upper;
-    if (opts.lower)  pool += CHARS.lower;
-    if (opts.digit)  pool += CHARS.digit;
-    if (opts.symbol) pool += CHARS.symbol;
-    if (!pool) pool = CHARS.lower;
-
-    const arr = new Uint32Array(length);
-    crypto.getRandomValues(arr);
-    let pwArr = Array.from(arr).map(n => pool[n % pool.length]);
-
-    const required = [];
-    if (opts.upper)  required.push(CHARS.upper);
-    if (opts.lower)  required.push(CHARS.lower);
-    if (opts.digit)  required.push(CHARS.digit);
-    if (opts.symbol) required.push(CHARS.symbol);
-
-    if (required.length > 1 && length >= required.length) {
-      const positions = [...Array(length).keys()];
-      for (let i = positions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [positions[i], positions[j]] = [positions[j], positions[i]];
-      }
-      required.forEach((charset, idx) => {
-        const rnd = new Uint32Array(1);
-        crypto.getRandomValues(rnd);
-        pwArr[positions[idx]] = charset[rnd[0] % charset.length];
-      });
-    }
-    return pwArr.join('');
-  }
 
   function charClass(ch) {
     if (/[A-Z]/.test(ch)) return 'c-upper';
@@ -622,33 +733,11 @@
     return 'c-symbol';
   }
 
-  function colorize(pw) {
-    return pw.split('').map(ch =>
-      `<span class="${charClass(ch)}">${ch}</span>`
-    ).join('');
-  }
-
-  function calcEntropy(length, opts) {
-    let size = 0;
-    if (opts.upper)  size += 26;
-    if (opts.lower)  size += 26;
-    if (opts.digit)  size += 10;
-    if (opts.symbol) size += CHARS.symbol.length;
-    return Math.floor(length * Math.log2(size));
-  }
-
-  function updateEntropy(bits) {
-    entropyRow.style.display = 'flex';
-    const pct = Math.min(100, Math.round(bits / 128 * 100));
-    let label, color;
-    if (bits < 40)      { label = '弱い';       color = '#ef4444'; }
-    else if (bits < 64) { label = '普通';       color = '#f59e0b'; }
-    else if (bits < 96) { label = '強い';       color = '#10b981'; }
-    else                { label = '非常に強い'; color = '#2563eb'; }
-    entropyFill.style.width = pct + '%';
-    entropyFill.style.background = color;
-    entropyText.style.color = color;
-    entropyText.textContent = `${bits} bit · ${label}`;
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
   }
 
   let passwords = [];
@@ -656,49 +745,46 @@
   function generate() {
     const length = parseInt(lengthSlider.value);
     const count  = parseInt(countSlider.value);
-    const opts = {
-      upper:  document.querySelector('[data-key="upper"]').checked,
-      lower:  document.querySelector('[data-key="lower"]').checked,
-      digit:  document.querySelector('[data-key="digit"]').checked,
-      symbol: document.querySelector('[data-key="symbol"]').checked,
-    };
+    const opts   = getOptions();
 
     passwords = Array.from({ length: count }, () => generatePassword(length, opts));
 
-    resultsList.innerHTML = passwords.map((pw, i) => `
-      <div class="pw-row" data-pw="${pw.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">
-        <span class="pw-num">${i + 1}</span>
-        <span class="pw-text">${colorize(pw)}</span>
-        <button class="pw-copy-btn" onclick="copyRow(this.closest('.pw-row'))">コピー</button>
-      </div>
-    `).join('');
-
-    updateEntropy(calcEntropy(length, opts));
+    // innerHTML を使わず textContent で組み立てる（記号の < や & がHTMLとして解釈されない）
+    resultsList.replaceChildren(...passwords.map((pw, i) => {
+      const row  = el('div', 'pw-row');
+      const text = el('span', 'pw-text');
+      for (const ch of pw) text.append(el('span', charClass(ch), ch));
+      const btn = el('button', 'pw-copy-btn', 'コピー');
+      btn.type = 'button';
+      btn.setAttribute('aria-label', `${i + 1}番目のパスワードをコピー`);
+      btn.addEventListener('click', () => copyRow(row, pw));
+      row.append(el('span', 'pw-num', String(i + 1)), text, btn);
+      return row;
+    }));
+    copyAllBtn.disabled = false;
   }
 
-  function copyRow(el) {
-    const pw = el.dataset.pw;
+  function copyRow(row, pw) {
     navigator.clipboard.writeText(pw).then(() => {
       document.querySelectorAll('.pw-row').forEach(r => {
         r.classList.remove('copied');
-        const btn = r.querySelector('.pw-copy-btn');
-        if (btn) btn.textContent = 'コピー';
+        r.querySelector('.pw-copy-btn').textContent = 'コピー';
       });
-      el.classList.add('copied');
-      el.querySelector('.pw-copy-btn').textContent = '✓ 完了';
+      row.classList.add('copied');
+      row.querySelector('.pw-copy-btn').textContent = '✓ 完了';
       setTimeout(() => {
-        el.classList.remove('copied');
-        const btn = el.querySelector('.pw-copy-btn');
-        if (btn) btn.textContent = 'コピー';
+        row.classList.remove('copied');
+        row.querySelector('.pw-copy-btn').textContent = 'コピー';
       }, 2000);
-    });
+    }, () => showToast('コピーできませんでした'));
   }
 
   copyAllBtn.addEventListener('click', () => {
     if (!passwords.length) return;
-    navigator.clipboard.writeText(passwords.join('\n')).then(() => {
-      showToast('すべてのパスワードをコピーしました');
-    });
+    navigator.clipboard.writeText(passwords.join('\n')).then(
+      () => showToast('すべてのパスワードをコピーしました'),
+      () => showToast('コピーできませんでした')
+    );
   });
 
   generateBtn.addEventListener('click', generate);
@@ -711,7 +797,13 @@
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
   }
 
-  generate();
+  // 安全な乱数が使えない環境では生成させない
+  if (!window.crypto || !crypto.getRandomValues) {
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'このブラウザでは安全な乱数が使えません';
+  }
+
+  updateEntropy();
 </script>
 </body>
 </html>
